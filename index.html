@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Качели без запчастей — вторая жизнь для электронных качелей</title>
+<meta name="description" content="Модернизация и ремонт детских электронных качелей на Arduino, когда родную плату управления не найти.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔌</text></svg>">
+<style>
+  :root {
+    --bg: #12161c;
+    --bg-2: #1a2029;
+    --text: #eef1f4;
+    --text-dim: #9aa8b4;
+    --accent: #e2695a;
+    --font-display: "Bahnschrift", "SF Compact Text", "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    --font-body: -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: var(--font-body); overflow: hidden;
+  }
+  #scene { position: fixed; inset: 0; display: block; touch-action: none; }
+
+  .overlay {
+    position: fixed; inset: 0; pointer-events: none;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 6vw; z-index: 2;
+  }
+  .kicker {
+    font-family: var(--font-display); text-transform: uppercase; letter-spacing: 2px;
+    font-size: 12px; color: var(--accent); font-weight: 700; margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--font-display); font-weight: 700; margin: 0 0 16px;
+    font-size: clamp(28px, 6vw, 56px); line-height: 1.08; max-width: 12ch; text-wrap: balance;
+    text-shadow: 0 2px 24px rgba(0,0,0,.5);
+  }
+  p.lead {
+    font-size: clamp(14px, 1.6vw, 18px); color: var(--text-dim); max-width: 34ch; margin: 0 0 28px;
+    text-shadow: 0 2px 16px rgba(0,0,0,.5);
+  }
+  .cta { pointer-events: auto; display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    padding: 13px 24px; border-radius: 999px; text-decoration: none;
+  }
+  .btn.primary { background: var(--accent); color: #1a0f0c; }
+  .btn.ghost { background: rgba(255,255,255,.08); color: var(--text); border: 1px solid rgba(255,255,255,.2); backdrop-filter: blur(6px); }
+
+  .hint {
+    position: fixed; bottom: 22px; right: 26px; z-index: 2;
+    font-size: 12px; color: var(--text-dim); font-family: var(--font-display);
+    display: flex; align-items: center; gap: 8px; opacity: .8;
+  }
+  .hint svg { width: 16px; height: 16px; opacity: .8; }
+
+  @media (max-width: 620px) {
+    .overlay { padding: 8vw 6vw; justify-content: flex-end; padding-bottom: 14vw; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+
+<div class="overlay">
+  <p class="kicker">Качели без запчастей</p>
+  <h1>Плата сгорела.<br>Качели — нет.</h1>
+  <p class="lead">
+    Модернизация детских электрокачелей на Arduino, когда родную плату управления
+    уже не найти. Схемы, код и гайды по конкретным моделям.
+  </p>
+  <div class="cta">
+    <a class="btn primary" href="https://serega212121.github.io/kacheli-bez-zapchastey/">Смотреть модели</a>
+    <a class="btn ghost" href="https://github.com/serega212121/nuovita-agio-ag2-arduino" target="_blank" rel="noopener">Код на GitHub</a>
+  </div>
+</div>
+
+<div class="hint">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v18M4 12h16" stroke-linecap="round"/></svg>
+  Потяните, чтобы повернуть
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const canvas = document.getElementById("scene");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x12161c);
+scene.fog = new THREE.Fog(0x12161c, 6, 15);
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(3.4, 2.1, 4.4);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.15, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.9;
+controls.enablePan = false;
+controls.minDistance = 3;
+controls.maxDistance = 13;
+controls.minPolarAngle = 0.5;
+controls.maxPolarAngle = 1.5;
+
+// ---- lighting ----
+scene.add(new THREE.HemisphereLight(0x8fa6c9, 0x14100e, 0.55));
+const key = new THREE.DirectionalLight(0xfff2e6, 2.1);
+key.position.set(3.5, 5.5, 2.5);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = -4; key.shadow.camera.right = 4;
+key.shadow.camera.top = 4; key.shadow.camera.bottom = -4;
+key.shadow.bias = -0.0015;
+scene.add(key);
+const rim = new THREE.PointLight(0xe2695a, 6, 10, 2);
+rim.position.set(-2.6, 2.4, -2.2);
+scene.add(rim);
+const fill = new THREE.PointLight(0x5aa0e2, 2.4, 10, 2);
+fill.position.set(-1.5, 1.2, 2.6);
+scene.add(fill);
+
+// ---- ground ----
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(9, 64),
+  new THREE.MeshStandardMaterial({ color: 0x1a2029, roughness: 0.95, metalness: 0 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const ringMat = new THREE.MeshBasicMaterial({ color: 0xe2695a, transparent: true, opacity: 0.35 });
+for (let i = 0; i < 3; i++) {
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.7 + i * 0.5, 1.72 + i * 0.5, 64), ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.01;
+  scene.add(ring);
+}
+
+// ---- materials ----
+const frameMat = new THREE.MeshStandardMaterial({ color: 0xd7dde3, roughness: 0.35, metalness: 0.55 });
+const seatMat = new THREE.MeshStandardMaterial({ color: 0xe2695a, roughness: 0.5, metalness: 0.05 });
+const darkMat = new THREE.MeshStandardMaterial({ color: 0x2a2f36, roughness: 0.6, metalness: 0.2 });
+const pcbMat = new THREE.MeshStandardMaterial({ color: 0x1f7a4d, roughness: 0.55, metalness: 0.1 });
+const ledMat = new THREE.MeshStandardMaterial({ color: 0x5ac8ff, emissive: 0x2f8fd6, emissiveIntensity: 1.4, roughness: 0.3 });
+
+const rig = new THREE.Group();
+scene.add(rig);
+
+function limb(a, b, radius, material) {
+  const start = new THREE.Vector3(...a);
+  const end = new THREE.Vector3(...b);
+  const dir = new THREE.Vector3().subVectors(end, start);
+  const len = dir.length();
+  const geo = new THREE.CylinderGeometry(radius, radius, len, 16);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+  mesh.position.copy(mid);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+  return mesh;
+}
+
+// A-frames (front z=-0.6, back z=+0.6)
+const apex = 2.15, spread = 1.05;
+[-0.6, 0.6].forEach((z) => {
+  rig.add(limb([-spread, 0, z], [0, apex, z], 0.06, frameMat));
+  rig.add(limb([spread, 0, z], [0, apex, z], 0.06, frameMat));
+  // small foot caps
+  [-spread, spread].forEach((x) => {
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.06, 16), darkMat);
+    foot.position.set(x, 0.03, z);
+    foot.castShadow = true;
+    rig.add(foot);
+  });
+});
+
+// top bar
+rig.add(limb([0, apex, -0.6], [0, apex, 0.6], 0.065, frameMat));
+
+// motor housing at top-center
+const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 24), darkMat);
+motor.rotation.z = Math.PI / 2;
+motor.position.set(0, apex, 0);
+motor.castShadow = true;
+rig.add(motor);
+const motorBand = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.02, 8, 24), seatMat);
+motorBand.rotation.y = Math.PI / 2;
+motorBand.position.set(0, apex, 0);
+rig.add(motorBand);
+
+// hanging rods to seat
+const seatY = 1.05;
+rig.add(limb([-0.22, apex - 0.1, -0.15], [-0.22, seatY + 0.22, -0.1], 0.02, darkMat));
+rig.add(limb([0.22, apex - 0.1, -0.15], [0.22, seatY + 0.22, -0.1], 0.02, darkMat));
+rig.add(limb([-0.2, apex - 0.1, 0.15], [-0.18, seatY + 0.22, 0.12], 0.02, darkMat));
+rig.add(limb([0.2, apex - 0.1, 0.15], [0.18, seatY + 0.22, 0.12], 0.02, darkMat));
+
+// seat base
+const seatBase = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.14, 0.5, 4, 2, 4), seatMat);
+seatBase.geometry.translate(0, -0.07, 0);
+seatBase.position.set(0, seatY, 0.05);
+seatBase.castShadow = true;
+seatBase.receiveShadow = true;
+rig.add(seatBase);
+
+// seat backrest (angled)
+const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.55, 0.12), seatMat);
+backrest.position.set(0, seatY + 0.26, -0.22);
+backrest.rotation.x = -0.28;
+backrest.castShadow = true;
+rig.add(backrest);
+
+// side bolsters
+[-0.29, 0.29].forEach((x) => {
+  const bolster = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.32, 4, 8), seatMat);
+  bolster.rotation.z = Math.PI / 2;
+  bolster.position.set(x, seatY + 0.02, -0.02);
+  bolster.castShadow = true;
+  rig.add(bolster);
+});
+
+// tiny arduino board near the base leg, tying the visual to the retrofit theme
+const board = new THREE.Group();
+const pcb = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.02, 0.22), pcbMat);
+board.add(pcb);
+const chip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.08), darkMat);
+chip.position.set(-0.04, 0.025, 0);
+board.add(chip);
+const led = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 12), ledMat);
+led.position.set(0.1, 0.02, 0.07);
+board.add(led);
+for (let i = 0; i < 5; i++) {
+  const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 6), darkMat);
+  pin.position.set(-0.15 + i * 0.07, -0.02, 0.11);
+  board.add(pin);
+}
+board.rotation.y = 0.5;
+board.position.set(0.85, 0.16, 0.75);
+board.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+rig.add(board);
+
+// gentle idle sway
+const clock = new THREE.Clock();
+function animate() {
+  const t = clock.getElapsedTime();
+  rig.children.forEach(() => {}); // no-op, seat sway handled via group below
+  seatGroupSway(t);
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+
+// wrap seat + rods + motor band into a subtle pendulum sway for life
+const swayGroup = new THREE.Group();
+[seatBase, backrest].forEach((m) => swayGroup.add(m));
+rig.add(swayGroup);
+swayGroup.position.set(0, seatY, 0.05);
+seatBase.position.set(0, 0, 0);
+backrest.position.set(0, 0.26, -0.27);
+
+function seatGroupSway(t) {
+  swayGroup.rotation.z = Math.sin(t * 1.3) * 0.045;
+}
+
+const baseDistance = camera.position.distanceTo(controls.target);
+function fitCameraDistance(aspect) {
+  const dist = aspect < 0.85 ? baseDistance * (1.1 / Math.max(aspect, 0.38)) : baseDistance;
+  const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+  camera.position.copy(controls.target).addScaledVector(dir, Math.min(dist, 13));
+}
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  if (w < 1 || h < 1) return;
+  const aspect = w / h;
+  fitCameraDistance(aspect);
+  camera.aspect = aspect;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+addEventListener("resize", resize);
+resize();
+requestAnimationFrame(resize);
+setTimeout(resize, 150);
+animate();
+</script>
+</body>
+</html>
