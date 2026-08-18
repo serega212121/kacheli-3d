@@ -111,17 +111,17 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment()).texture;
 
 const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(2.7, 1.65, 3.7);
+camera.position.set(3.3, 1.85, 4.4);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0.8, 0);
+controls.target.set(0, 1.05, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.07;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.6;
 controls.enablePan = false;
-controls.minDistance = 1.8;
-controls.maxDistance = 8;
+controls.minDistance = 2.2;
+controls.maxDistance = 10;
 controls.minPolarAngle = 0.6;
 controls.maxPolarAngle = 1.6;
 
@@ -158,46 +158,66 @@ const accentMat = new THREE.MeshStandardMaterial({ color: 0xe2695a, roughness: 0
 const toy = new THREE.Group();
 scene.add(toy);
 
-// ---- pedestal base: smooth lathe-revolved silhouette ----
-const basePts = [
-  new THREE.Vector2(0.0, 0.0),
-  new THREE.Vector2(0.58, 0.0),
-  new THREE.Vector2(0.62, 0.04),
-  new THREE.Vector2(0.56, 0.1),
-  new THREE.Vector2(0.42, 0.24),
-  new THREE.Vector2(0.30, 0.42),
-  new THREE.Vector2(0.225, 0.62),
-  new THREE.Vector2(0.20, 0.78),
-  new THREE.Vector2(0.225, 0.86),
-  new THREE.Vector2(0.20, 0.90),
-];
-const baseGeo = new THREE.LatheGeometry(basePts, 64);
-const base = new THREE.Mesh(baseGeo, shellMat);
-base.castShadow = true;
-base.receiveShadow = true;
-toy.add(base);
+// limb: a smooth rounded tube/cylinder between two arbitrary points, with ball joints at the ends
+function limb(a, b, radius, material, capRadius) {
+  const start = new THREE.Vector3(...a);
+  const end = new THREE.Vector3(...b);
+  const dir = new THREE.Vector3().subVectors(end, start);
+  const len = dir.length();
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 20), material);
+  mesh.position.copy(start).addScaledVector(dir, 0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  const group = new THREE.Group();
+  group.add(mesh);
+  if (capRadius) {
+    [start, end].forEach((p) => {
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(capRadius, 20, 16), material);
+      cap.position.copy(p);
+      cap.castShadow = true;
+      group.add(cap);
+    });
+  }
+  return group;
+}
 
-// thin accent ring where the base meets the floor
-const footRing = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.012, 12, 64), accentMat);
-footRing.rotation.x = Math.PI / 2;
-footRing.position.y = 0.012;
-toy.add(footRing);
+// ---- A-frame stand: two frames (front/back) meeting at a shared top bar ----
+const apex = 2.05, spread = 0.92, frameZ = 0.52;
+[-frameZ, frameZ].forEach((z) => {
+  toy.add(limb([-spread, 0.02, z], [0, apex, z], 0.045, shellMat, 0.05));
+  toy.add(limb([spread, 0.02, z], [0, apex, z], 0.045, shellMat, 0.05));
+  [-spread, spread].forEach((x) => {
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.08, 0.05, 24), jointMat);
+    foot.position.set(x, 0.025, z);
+    foot.castShadow = true;
+    toy.add(foot);
+  });
+});
+toy.add(limb([0, apex, -frameZ], [0, apex, frameZ], 0.05, shellMat, 0.055));
 
-// swivel joint connecting base to seat
-const joint = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.12, 32), jointMat);
-joint.position.y = 0.95;
-joint.castShadow = true;
-toy.add(joint);
-const jointRing = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.01, 10, 48), accentMat);
-jointRing.rotation.x = Math.PI / 2;
-jointRing.position.y = 1.0;
-toy.add(jointRing);
+// motor housing at the top-centre, with the one visible accent detail
+const motor = limb([-0.16, apex, 0], [0.16, apex, 0], 0.13, jointMat, 0);
+toy.add(motor);
+const motorRing = new THREE.Mesh(new THREE.TorusGeometry(0.132, 0.01, 10, 40), accentMat);
+motorRing.rotation.y = Math.PI / 2;
+motorRing.position.set(0, apex, 0);
+toy.add(motorRing);
 
-// ---- seat pod: lathe-revolved bowl (same technique as the base), tilted like a recliner ----
+// ---- seat pod: lathe-revolved bowl (same technique as before), hanging from the bar ----
 const seatGroup = new THREE.Group();
-seatGroup.position.set(0, 0.94, 0.0);
-seatGroup.rotation.x = -0.22;
+seatGroup.position.set(0, apex - 0.98, 0.06);
+seatGroup.rotation.x = -0.2;
 toy.add(seatGroup);
+
+// hanging rods from the bar down to the seat rim
+const rodPairs = [
+  [[-0.2, apex - 0.06, -0.18], [-0.4, apex - 0.98 + 0.5, -0.34]],
+  [[0.2, apex - 0.06, -0.18], [0.4, apex - 0.98 + 0.5, -0.34]],
+  [[-0.16, apex - 0.06, 0.18], [-0.36, apex - 0.98 + 0.44, 0.36]],
+  [[0.16, apex - 0.06, 0.18], [0.36, apex - 0.98 + 0.44, 0.36]],
+];
+rodPairs.forEach(([p1, p2]) => toy.add(limb(p1, p2, 0.014, jointMat, 0)));
 
 const bowlPts = [
   new THREE.Vector2(0.0, 0.0),
@@ -256,7 +276,7 @@ function makeShadowTexture() {
   return new THREE.CanvasTexture(c);
 }
 const contactShadow = new THREE.Mesh(
-  new THREE.CircleGeometry(1.0, 48),
+  new THREE.CircleGeometry(1.5, 48),
   new THREE.MeshBasicMaterial({ map: makeShadowTexture(), transparent: true, depthWrite: false })
 );
 contactShadow.rotation.x = -Math.PI / 2;
@@ -278,7 +298,7 @@ const baseDistance = camera.position.distanceTo(controls.target);
 function fitCameraDistance(aspect) {
   const dist = aspect < 0.85 ? baseDistance * (1.15 / Math.max(aspect, 0.38)) : baseDistance;
   const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-  camera.position.copy(controls.target).addScaledVector(dir, Math.min(dist, 8));
+  camera.position.copy(controls.target).addScaledVector(dir, Math.min(dist, 12));
 }
 
 function resize() {
