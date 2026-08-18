@@ -8,11 +8,11 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔌</text></svg>">
 <style>
   :root {
-    --bg: #171512;
-    --bg-2: #1e1b17;
-    --text: #f5f1ec;
-    --text-dim: #a79f95;
-    --accent: #e2695a;
+    --bg: #f4f1ec;
+    --bg-2: #ffffff;
+    --text: #211e1a;
+    --text-dim: #6f685e;
+    --accent: #d6543f;
     --font-display: "Bahnschrift", "SF Compact Text", "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
     --font-body: -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
   }
@@ -35,19 +35,17 @@
   h1 {
     font-family: var(--font-display); font-weight: 700; margin: 0 0 16px;
     font-size: clamp(28px, 6vw, 56px); line-height: 1.08; max-width: 12ch; text-wrap: balance;
-    text-shadow: 0 2px 24px rgba(0,0,0,.5);
   }
   p.lead {
     font-size: clamp(14px, 1.6vw, 18px); color: var(--text-dim); max-width: 34ch; margin: 0 0 28px;
-    text-shadow: 0 2px 16px rgba(0,0,0,.5);
   }
   .cta { pointer-events: auto; display: flex; gap: 12px; flex-wrap: wrap; }
   .btn {
     font-family: var(--font-display); font-weight: 700; font-size: 14px;
     padding: 13px 24px; border-radius: 999px; text-decoration: none;
   }
-  .btn.primary { background: var(--accent); color: #1a0f0c; }
-  .btn.ghost { background: rgba(255,255,255,.08); color: var(--text); border: 1px solid rgba(255,255,255,.2); backdrop-filter: blur(6px); }
+  .btn.primary { background: var(--accent); color: #fff8f4; }
+  .btn.ghost { background: rgba(255,255,255,.5); color: var(--text); border: 1px solid rgba(33,30,26,.18); backdrop-filter: blur(6px); }
 
   .hint {
     position: fixed; bottom: 22px; right: 26px; z-index: 2;
@@ -100,13 +98,13 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.15;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x171512);
-scene.fog = new THREE.Fog(0x171512, 5, 12);
+scene.background = new THREE.Color(0xf4f1ec);
+scene.fog = new THREE.Fog(0xf4f1ec, 7, 15);
 
 // soft studio environment for gentle reflections on the glossy plastic
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -127,22 +125,26 @@ controls.maxDistance = 8;
 controls.minPolarAngle = 0.6;
 controls.maxPolarAngle = 1.6;
 
-// ---- warm, soft product-photo lighting ----
-scene.add(new THREE.HemisphereLight(0xfff1e0, 0x2a2018, 0.55));
-const key = new THREE.DirectionalLight(0xfff3e0, 2.3);
-key.position.set(2.6, 4, 2.2);
+// ---- bright, even studio lighting (softbox-style, like a catalog shot) ----
+scene.add(new THREE.HemisphereLight(0xffffff, 0xcdc6b8, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.7);
+key.position.set(2.2, 4, 2.6);
 key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048);
 key.shadow.camera.left = -2; key.shadow.camera.right = 2;
 key.shadow.camera.top = 2; key.shadow.camera.bottom = -2;
 key.shadow.bias = -0.001;
+key.shadow.radius = 6;
 scene.add(key);
-const warmFill = new THREE.PointLight(0xffd9b0, 1.6, 10, 2);
-warmFill.position.set(-2, 1.4, 1.8);
-scene.add(warmFill);
-const accentGlow = new THREE.PointLight(0xe2695a, 1.2, 6, 2);
-accentGlow.position.set(0.6, 0.5, -1.4);
-scene.add(accentGlow);
+const fillLeft = new THREE.PointLight(0xffffff, 1.1, 10, 2);
+fillLeft.position.set(-2.4, 1.6, 1.4);
+scene.add(fillLeft);
+const fillRight = new THREE.PointLight(0xffffff, 0.9, 10, 2);
+fillRight.position.set(2.2, 1.2, -1.6);
+scene.add(fillRight);
+const bounce = new THREE.PointLight(0xffe9df, 0.5, 8, 2);
+bounce.position.set(0, 0.2, 2);
+scene.add(bounce);
 
 // ---- materials ----
 const shellMat = new THREE.MeshPhysicalMaterial({
@@ -246,9 +248,9 @@ function makeShadowTexture() {
   c.width = c.height = size;
   const ctx = c.getContext("2d");
   const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  g.addColorStop(0, "rgba(0,0,0,0.4)");
-  g.addColorStop(0.7, "rgba(0,0,0,0.15)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
+  g.addColorStop(0, "rgba(30,25,20,0.22)");
+  g.addColorStop(0.7, "rgba(30,25,20,0.08)");
+  g.addColorStop(1, "rgba(30,25,20,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
   return new THREE.CanvasTexture(c);
