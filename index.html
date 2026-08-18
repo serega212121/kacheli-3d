@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Качели без запчастей — вторая жизнь для электронных качелей</title>
-<meta name="description" content="Модернизация и ремонт детских электронных качелей на Arduino, когда родную плату управления не найти.">
+<title>Качели без запчастей — модернизация электрокачелей для младенцев</title>
+<meta name="description" content="Модернизация и ремонт электронных качелей для младенцев на Arduino, когда родную плату управления не найти.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔌</text></svg>">
 <style>
   :root {
-    --bg: #12161c;
-    --bg-2: #1a2029;
-    --text: #eef1f4;
-    --text-dim: #9aa8b4;
+    --bg: #171512;
+    --bg-2: #1e1b17;
+    --text: #f5f1ec;
+    --text-dim: #a79f95;
     --accent: #e2695a;
     --font-display: "Bahnschrift", "SF Compact Text", "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
     --font-body: -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
@@ -70,8 +70,8 @@
   <p class="kicker">Качели без запчастей</p>
   <h1>Плата сгорела.<br>Качели — нет.</h1>
   <p class="lead">
-    Модернизация детских электрокачелей на Arduino, когда родную плату управления
-    уже не найти. Схемы, код и гайды по конкретным моделям.
+    Модернизация электронных качелей для младенцев на Arduino, когда родную плату
+    управления уже не найти. Схемы, код и гайды по конкретным моделям.
   </p>
   <div class="cta">
     <a class="btn primary" href="https://serega212121.github.io/kacheli-bez-zapchastey/">Смотреть модели</a>
@@ -93,199 +93,190 @@
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 const canvas = document.getElementById("scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x12161c);
-scene.fog = new THREE.Fog(0x12161c, 6, 15);
+scene.background = new THREE.Color(0x171512);
+scene.fog = new THREE.Fog(0x171512, 5, 12);
 
-const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(3.4, 2.1, 4.4);
+// soft studio environment for gentle reflections on the glossy plastic
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment()).texture;
+
+const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(2.7, 1.65, 3.7);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 1.15, 0);
+controls.target.set(0, 0.8, 0);
 controls.enableDamping = true;
-controls.dampingFactor = 0.08;
+controls.dampingFactor = 0.07;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 0.9;
+controls.autoRotateSpeed = 0.6;
 controls.enablePan = false;
-controls.minDistance = 3;
-controls.maxDistance = 13;
-controls.minPolarAngle = 0.5;
-controls.maxPolarAngle = 1.5;
+controls.minDistance = 1.8;
+controls.maxDistance = 8;
+controls.minPolarAngle = 0.6;
+controls.maxPolarAngle = 1.6;
 
-// ---- lighting ----
-scene.add(new THREE.HemisphereLight(0x8fa6c9, 0x14100e, 0.55));
-const key = new THREE.DirectionalLight(0xfff2e6, 2.1);
-key.position.set(3.5, 5.5, 2.5);
+// ---- warm, soft product-photo lighting ----
+scene.add(new THREE.HemisphereLight(0xfff1e0, 0x2a2018, 0.55));
+const key = new THREE.DirectionalLight(0xfff3e0, 2.3);
+key.position.set(2.6, 4, 2.2);
 key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048);
-key.shadow.camera.left = -4; key.shadow.camera.right = 4;
-key.shadow.camera.top = 4; key.shadow.camera.bottom = -4;
-key.shadow.bias = -0.0015;
+key.shadow.camera.left = -2; key.shadow.camera.right = 2;
+key.shadow.camera.top = 2; key.shadow.camera.bottom = -2;
+key.shadow.bias = -0.001;
 scene.add(key);
-const rim = new THREE.PointLight(0xe2695a, 6, 10, 2);
-rim.position.set(-2.6, 2.4, -2.2);
-scene.add(rim);
-const fill = new THREE.PointLight(0x5aa0e2, 2.4, 10, 2);
-fill.position.set(-1.5, 1.2, 2.6);
-scene.add(fill);
-
-// ---- ground ----
-const ground = new THREE.Mesh(
-  new THREE.CircleGeometry(9, 64),
-  new THREE.MeshStandardMaterial({ color: 0x1a2029, roughness: 0.95, metalness: 0 })
-);
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
-
-const ringMat = new THREE.MeshBasicMaterial({ color: 0xe2695a, transparent: true, opacity: 0.35 });
-for (let i = 0; i < 3; i++) {
-  const ring = new THREE.Mesh(new THREE.RingGeometry(1.7 + i * 0.5, 1.72 + i * 0.5, 64), ringMat);
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.01;
-  scene.add(ring);
-}
+const warmFill = new THREE.PointLight(0xffd9b0, 1.6, 10, 2);
+warmFill.position.set(-2, 1.4, 1.8);
+scene.add(warmFill);
+const accentGlow = new THREE.PointLight(0xe2695a, 1.2, 6, 2);
+accentGlow.position.set(0.6, 0.5, -1.4);
+scene.add(accentGlow);
 
 // ---- materials ----
-const frameMat = new THREE.MeshStandardMaterial({ color: 0xd7dde3, roughness: 0.35, metalness: 0.55 });
-const seatMat = new THREE.MeshStandardMaterial({ color: 0xe2695a, roughness: 0.5, metalness: 0.05 });
-const darkMat = new THREE.MeshStandardMaterial({ color: 0x2a2f36, roughness: 0.6, metalness: 0.2 });
-const pcbMat = new THREE.MeshStandardMaterial({ color: 0x1f7a4d, roughness: 0.55, metalness: 0.1 });
-const ledMat = new THREE.MeshStandardMaterial({ color: 0x5ac8ff, emissive: 0x2f8fd6, emissiveIntensity: 1.4, roughness: 0.3 });
-
-const rig = new THREE.Group();
-scene.add(rig);
-
-function limb(a, b, radius, material) {
-  const start = new THREE.Vector3(...a);
-  const end = new THREE.Vector3(...b);
-  const dir = new THREE.Vector3().subVectors(end, start);
-  const len = dir.length();
-  const geo = new THREE.CylinderGeometry(radius, radius, len, 16);
-  const mesh = new THREE.Mesh(geo, material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-  mesh.position.copy(mid);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-  return mesh;
-}
-
-// A-frames (front z=-0.6, back z=+0.6)
-const apex = 2.15, spread = 1.05;
-[-0.6, 0.6].forEach((z) => {
-  rig.add(limb([-spread, 0, z], [0, apex, z], 0.06, frameMat));
-  rig.add(limb([spread, 0, z], [0, apex, z], 0.06, frameMat));
-  // small foot caps
-  [-spread, spread].forEach((x) => {
-    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.06, 16), darkMat);
-    foot.position.set(x, 0.03, z);
-    foot.castShadow = true;
-    rig.add(foot);
-  });
+const shellMat = new THREE.MeshPhysicalMaterial({
+  color: 0xf4f1ea, roughness: 0.22, metalness: 0.02, clearcoat: 0.7, clearcoatRoughness: 0.25,
+  side: THREE.DoubleSide,
 });
+const jointMat = new THREE.MeshStandardMaterial({ color: 0x2c2a28, roughness: 0.4, metalness: 0.3 });
+const fabricMat = new THREE.MeshStandardMaterial({ color: 0xcfc9c0, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
+const accentMat = new THREE.MeshStandardMaterial({ color: 0xe2695a, roughness: 0.4, metalness: 0.1, emissive: 0x5c150f, emissiveIntensity: 0.4 });
 
-// top bar
-rig.add(limb([0, apex, -0.6], [0, apex, 0.6], 0.065, frameMat));
+const toy = new THREE.Group();
+scene.add(toy);
 
-// motor housing at top-center
-const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 24), darkMat);
-motor.rotation.z = Math.PI / 2;
-motor.position.set(0, apex, 0);
-motor.castShadow = true;
-rig.add(motor);
-const motorBand = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.02, 8, 24), seatMat);
-motorBand.rotation.y = Math.PI / 2;
-motorBand.position.set(0, apex, 0);
-rig.add(motorBand);
+// ---- pedestal base: smooth lathe-revolved silhouette ----
+const basePts = [
+  new THREE.Vector2(0.0, 0.0),
+  new THREE.Vector2(0.58, 0.0),
+  new THREE.Vector2(0.62, 0.04),
+  new THREE.Vector2(0.56, 0.1),
+  new THREE.Vector2(0.42, 0.24),
+  new THREE.Vector2(0.30, 0.42),
+  new THREE.Vector2(0.225, 0.62),
+  new THREE.Vector2(0.20, 0.78),
+  new THREE.Vector2(0.225, 0.86),
+  new THREE.Vector2(0.20, 0.90),
+];
+const baseGeo = new THREE.LatheGeometry(basePts, 64);
+const base = new THREE.Mesh(baseGeo, shellMat);
+base.castShadow = true;
+base.receiveShadow = true;
+toy.add(base);
 
-// hanging rods to seat
-const seatY = 1.05;
-rig.add(limb([-0.22, apex - 0.1, -0.15], [-0.22, seatY + 0.22, -0.1], 0.02, darkMat));
-rig.add(limb([0.22, apex - 0.1, -0.15], [0.22, seatY + 0.22, -0.1], 0.02, darkMat));
-rig.add(limb([-0.2, apex - 0.1, 0.15], [-0.18, seatY + 0.22, 0.12], 0.02, darkMat));
-rig.add(limb([0.2, apex - 0.1, 0.15], [0.18, seatY + 0.22, 0.12], 0.02, darkMat));
+// thin accent ring where the base meets the floor
+const footRing = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.012, 12, 64), accentMat);
+footRing.rotation.x = Math.PI / 2;
+footRing.position.y = 0.012;
+toy.add(footRing);
 
-// seat base
-const seatBase = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.14, 0.5, 4, 2, 4), seatMat);
-seatBase.geometry.translate(0, -0.07, 0);
-seatBase.position.set(0, seatY, 0.05);
-seatBase.castShadow = true;
-seatBase.receiveShadow = true;
-rig.add(seatBase);
+// swivel joint connecting base to seat
+const joint = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.12, 32), jointMat);
+joint.position.y = 0.95;
+joint.castShadow = true;
+toy.add(joint);
+const jointRing = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.01, 10, 48), accentMat);
+jointRing.rotation.x = Math.PI / 2;
+jointRing.position.y = 1.0;
+toy.add(jointRing);
 
-// seat backrest (angled)
-const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.55, 0.12), seatMat);
-backrest.position.set(0, seatY + 0.26, -0.22);
-backrest.rotation.x = -0.28;
-backrest.castShadow = true;
-rig.add(backrest);
+// ---- seat pod: lathe-revolved bowl (same technique as the base), tilted like a recliner ----
+const seatGroup = new THREE.Group();
+seatGroup.position.set(0, 0.94, 0.0);
+seatGroup.rotation.x = -0.22;
+toy.add(seatGroup);
 
-// side bolsters
-[-0.29, 0.29].forEach((x) => {
-  const bolster = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.32, 4, 8), seatMat);
-  bolster.rotation.z = Math.PI / 2;
-  bolster.position.set(x, seatY + 0.02, -0.02);
-  bolster.castShadow = true;
-  rig.add(bolster);
-});
+const bowlPts = [
+  new THREE.Vector2(0.0, 0.0),
+  new THREE.Vector2(0.12, 0.015),
+  new THREE.Vector2(0.26, 0.08),
+  new THREE.Vector2(0.38, 0.22),
+  new THREE.Vector2(0.44, 0.36),
+  new THREE.Vector2(0.455, 0.48),
+  new THREE.Vector2(0.43, 0.58),
+  new THREE.Vector2(0.445, 0.63),
+];
+const shellGeo = new THREE.LatheGeometry(bowlPts, 48);
+const seatShell = new THREE.Mesh(shellGeo, shellMat);
+seatShell.scale.set(1.0, 1.0, 1.5);
+seatShell.castShadow = true;
+seatShell.receiveShadow = true;
+seatGroup.add(seatShell);
 
-// tiny arduino board near the base leg, tying the visual to the retrofit theme
-const board = new THREE.Group();
-const pcb = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.02, 0.22), pcbMat);
-board.add(pcb);
-const chip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.08), darkMat);
-chip.position.set(-0.04, 0.025, 0);
-board.add(chip);
-const led = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 12), ledMat);
-led.position.set(0.1, 0.02, 0.07);
-board.add(led);
-for (let i = 0; i < 5; i++) {
-  const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 6), darkMat);
-  pin.position.set(-0.15 + i * 0.07, -0.02, 0.11);
-  board.add(pin);
+const cushionPts = bowlPts.map((p) => new THREE.Vector2(p.x * 0.86, p.y * 0.9 + 0.05));
+const cushion = new THREE.Mesh(new THREE.LatheGeometry(cushionPts, 48), fabricMat);
+cushion.scale.set(1.0, 1.0, 1.42);
+cushion.position.z = 0.04;
+cushion.receiveShadow = true;
+seatGroup.add(cushion);
+
+// rounded head-support halo, echoing the reference photo's curved wing
+const halo = new THREE.Mesh(
+  new THREE.TorusGeometry(0.42, 0.045, 20, 64, Math.PI * 1.1),
+  shellMat
+);
+halo.rotation.set(0, 0, 0);
+halo.position.set(0, 0.63, -0.42);
+halo.castShadow = true;
+seatGroup.add(halo);
+
+// tiny embedded status light — the one visible hint of the electronics inside
+const led = new THREE.Mesh(
+  new THREE.SphereGeometry(0.018, 12, 12),
+  new THREE.MeshStandardMaterial({ color: 0xe2695a, emissive: 0xe2695a, emissiveIntensity: 2.5 })
+);
+led.position.set(0.3, 0.5, 0.5);
+seatGroup.add(led);
+
+// ---- soft contact shadow ----
+function makeShadowTexture() {
+  const size = 256;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, "rgba(0,0,0,0.4)");
+  g.addColorStop(0.7, "rgba(0,0,0,0.15)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(c);
 }
-board.rotation.y = 0.5;
-board.position.set(0.85, 0.16, 0.75);
-board.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-rig.add(board);
+const contactShadow = new THREE.Mesh(
+  new THREE.CircleGeometry(1.0, 48),
+  new THREE.MeshBasicMaterial({ map: makeShadowTexture(), transparent: true, depthWrite: false })
+);
+contactShadow.rotation.x = -Math.PI / 2;
+contactShadow.position.y = 0.002;
+scene.add(contactShadow);
 
-// gentle idle sway
+// ---- animation ----
 const clock = new THREE.Clock();
 function animate() {
   const t = clock.getElapsedTime();
-  rig.children.forEach(() => {}); // no-op, seat sway handled via group below
-  seatGroupSway(t);
+  led.material.emissiveIntensity = 2.2 + Math.sin(t * 1.8) * 0.6;
+  toy.rotation.y = Math.sin(t * 0.35) * 0.06;
   controls.update();
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
 
-// wrap seat + rods + motor band into a subtle pendulum sway for life
-const swayGroup = new THREE.Group();
-[seatBase, backrest].forEach((m) => swayGroup.add(m));
-rig.add(swayGroup);
-swayGroup.position.set(0, seatY, 0.05);
-seatBase.position.set(0, 0, 0);
-backrest.position.set(0, 0.26, -0.27);
-
-function seatGroupSway(t) {
-  swayGroup.rotation.z = Math.sin(t * 1.3) * 0.045;
-}
-
 const baseDistance = camera.position.distanceTo(controls.target);
 function fitCameraDistance(aspect) {
-  const dist = aspect < 0.85 ? baseDistance * (1.1 / Math.max(aspect, 0.38)) : baseDistance;
+  const dist = aspect < 0.85 ? baseDistance * (1.15 / Math.max(aspect, 0.38)) : baseDistance;
   const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-  camera.position.copy(controls.target).addScaledVector(dir, Math.min(dist, 13));
+  camera.position.copy(controls.target).addScaledVector(dir, Math.min(dist, 8));
 }
 
 function resize() {
